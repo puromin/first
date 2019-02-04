@@ -1,0 +1,90 @@
+//営業日判定
+function isBusinessDay(date){
+  if (date.getDay() == 0 || date.getDay() == 6) {
+    return false;
+  }
+  var calJa = CalendarApp.getCalendarById('ja.japanese#holiday@group.v.calendar.google.com');
+  if(calJa.getEventsForDay(date).length > 0){
+    return false;
+  }
+  return true;
+}
+
+//使用済みトリガーを削除する
+function delTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for(var i=0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() == "post_slack") {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+}
+
+//毎朝、トリガーをセットする
+function setTrigger(){
+  var setTime = new Date();
+  setTime.setHours(10);
+  setTime.setMinutes(10);
+ 
+  if (isBusinessDay(new Date())){
+    ScriptApp.newTrigger('post_slack').timeBased().at(setTime).create();
+  }
+
+}
+//日中用のトリガー作成
+function setTrigger_daytime1(){
+  var setTime = new Date();
+  setTime.setHours(14);
+  setTime.setMinutes(00);
+ 
+  ScriptApp.newTrigger('post').timeBased().at(setTime).create();
+
+}
+//日中用のトリガー作成
+function setTrigger_daytime2(){
+  var setTime = new Date();
+  setTime.setHours(17);
+  setTime.setMinutes(00);
+ 
+  ScriptApp.newTrigger('post').timeBased().at(setTime).create();
+
+}
+
+//日中用のトリガーを削除する
+function delTrigger_daytime() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for(var i=0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() == "post") {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+}
+function postSlack(text){
+  var url = "slakのhooksのurlを入れる";
+  var options = {
+    "method" : "POST",
+    "headers": {"Content-type": "application/json"},
+    "payload" : '{"text":"' + text + '"}'
+  };
+
+  UrlFetchApp.fetch(url, options);
+}
+
+function post(){
+  var ss = SpreadsheetApp.getActiveSheet();
+  var range = ss.getRange('a18');
+  var message =range.getValue();
+
+  postSlack(message);
+}
+function post_slack(){
+  //朝用のトリガーを削除
+  delTrigger();
+  //昨日の日中用のトリガーを削除
+  delTrigger_daytime();
+  //メッセージを投稿
+  post();
+  //日中用のトリガーをセット
+  setTrigger_daytime1();
+  setTrigger_daytime2();
+}
